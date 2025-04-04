@@ -1,0 +1,1 @@
+Playing aorund with Mistral OCR
