@@ -1,2 +1,3 @@
 .venv
 .env
+/pamplets/src/__pycache__
