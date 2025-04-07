@@ -6,7 +6,6 @@ import { message, Upload } from 'antd';
 import '@ant-design/v5-patch-for-react-19';
 
 const { Dragger } = Upload;
-
 const props: UploadProps = {
   name: 'file',
   multiple: false,
@@ -27,12 +26,11 @@ const props: UploadProps = {
     }
     return isValidFile || Upload.LIST_IGNORE;
   },
+  // The response from the server is available in the onChange handler
+  // when the upload status is 'done' in the info.file.response object
   onChange(info) {
     const { status } = info.file;
-    
-    // Log detailed request information
-    console.log('Upload status:', status);
-    console.log('Full upload info:', info);
+    console.log('Status:', status);
     
     if (status !== 'uploading') {
       console.log(info.file, info.fileList);
@@ -40,6 +38,11 @@ const props: UploadProps = {
     if (status === 'done') {
       console.log('Server response:', info.file.response);
       message.success(`${info.file.name} file uploaded successfully.`);
+      
+      // Redirect to the article page using the article_id from the response
+      if (info.file.response?.article_id) {
+        window.location.href = `/${info.file.response.article_id}`;
+      }
     } else if (status === 'error') {
       console.error('Upload error details:', info.file.response);
       console.error('HTTP status:', info.file.xhr?.status);

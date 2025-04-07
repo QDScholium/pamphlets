@@ -40,7 +40,7 @@ export default function PampletPage() {
   }, [pampletId]);
 
   return (
-    <div className="container mx-auto py-8 px-4 flex flex-col items-center justify-center">
+    <div className="container mx-auto py-8 px-20 flex flex-col items-start">
       {loading && <p className="text-gray-600 text-center">Loading pamplet content...</p>}
       {error && <p className="text-red-500">Error: {error}</p>}
       
