@@ -22,5 +22,5 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: "Times New Roman", Times, serif;
+  font-family: "Helvetica", "Arial", sans-serif;
 }
