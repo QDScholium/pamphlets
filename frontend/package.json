@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@ant-design/v5-patch-for-react-19": "^1.0.3",
+    "@expo-google-fonts/charis-sil": "^0.3.0",
     "antd": "^5.24.6",
     "next": "15.2.4",
     "radix-ui": "^1.1.3",
