@@ -1,9 +1,18 @@
 import os
 from mistralai import Mistral
 from dotenv import load_dotenv
+from psycopg2 import pool
+from psycopg2.extras import Json
+
 
 load_dotenv()
+connection_string = os.getenv('DATABASE_URL')
 
+connection_pool = pool.SimpleConnectionPool(
+    1,  # Minimum number of connections in the pool
+    10,  # Maximum number of connections in the pool
+    connection_string
+)
 api_key = os.environ["MISTRAL_API_KEY"]
 
 client = Mistral(api_key=api_key)
@@ -36,11 +45,76 @@ def process_document_ocr(file_url):
             },
             include_image_base64=True
         )
-        return ocr_response
+        return ocr_response.model_dump()
     except Exception as e:
         error_msg = f"OCR processing failed: {str(e)}"
         raise type(e)(error_msg) from e
     
+
+def store_markdown(markdown:dict, id: str):
+    """
+    Store markdown content in the database with the given ID.
+    
+    Args:
+        markdown: The markdown content to store
+        id: The unique identifier for the markdown content
+        
+    Returns:
+        True if storage was successful, False otherwise
+    """
+    conn = None 
+    try:
+        conn = connection_pool.getconn()
+        table = "articles"
+        with conn.cursor() as cursor:
+            cursor.execute(f"""
+                INSERT INTO {table} (id, content, comments)
+                VALUES (%s, %s, %s)
+                ON CONFLICT (id) DO UPDATE
+                SET content = EXCLUDED.content
+            """, (id, Json(markdown), Json({})))
+            conn.commit()
+        return True
+    except Exception as e:
+        print(f"Error storing markdown2: {str(e)}")
+        return False
+    finally:
+        # Return the connection to the pool
+        if conn:
+            connection_pool.putconn(conn)
+
+def get_markdown(id: str):
+    """
+    Retrieve markdown content from the database for the given ID.
+    
+    Args:
+        id: The unique identifier for the markdown content.
+        
+    Returns:
+        The markdown content as a dictionary if found, or None otherwise.
+    """
+    conn = None
+    try:
+        conn = connection_pool.getconn()
+        table = "articles"
+        with conn.cursor() as cursor:
+            cursor.execute(f"SELECT content FROM {table} WHERE id = %s", (id,))
+            row = cursor.fetchone()
+            if row:
+                content = row[0]
+                return content
+            else:
+                return None
+    except Exception as e:
+        print(f"Error retrieving markdown: {str(e)}")
+        return None
+    finally:
+        if conn:
+            connection_pool.putconn(conn)
+    
 if __name__ == "__main__":
-    file_url = "https://13a5-138-51-71-14.ngrok-free.app/files/67f309db84159383bd889930"
-    print(process_document_ocr(file_url))
+    # file_url = "https://13a5-138-51-71-14.ngrok-free.app/files/67f309db84159383bd889930"
+    # file_md = process_document_ocr(file_url)
+    # print(type(file_md))
+    # store_markdown(file_md,"67f309db84159383bd889930")
+    print(get_markdown("67f309db84159383bd889930"))

@@ -5,8 +5,9 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
+from psycopg2.extras import Json
 
-from src.main import process_document_ocr
+from src.main import process_document_ocr, get_markdown, store_markdown
 import asyncio
 from pymongo import MongoClient
 import gridfs
@@ -17,17 +18,16 @@ app = FastAPI(title="Pamplets OCR API", description="API for OCR processing usin
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # Specify the exact origin of your frontend
+    allow_origins=["http://localhost:3000"],
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],  # Explicitly list allowed methods
-    allow_headers=["Content-Type", "Authorization", "X-Requested-With"],  # Explicitly list allowed headers
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
 )
+mongo_url = os.environ.get("MONGO_URL")
 
-mongo_client = MongoClient("mongodb://localhost:27017")
+mongo_client = MongoClient(mongo_url)
 db = mongo_client["pamphlets"]  # Database for storing uploaded documents and metadata
 fs = gridfs.GridFS(db)
 backend_url = os.environ.get("BACKEND_URL")
-print(backend_url)
 
 try:
     api_key = os.environ["MISTRAL_API_KEY"]
@@ -57,9 +57,14 @@ async def upload_document(file: UploadFile = File(...)):
         print(f"OCR processing error: {str(e)}")
         return JSONResponse(status_code=500, content={"message": f"OCR processing failed: {str(e)}"})
 
-    print(ocr_result)
-
-    return {"ocr_result": ocr_result}
+    article_id = str(file_id)
+    try:
+        stored = await asyncio.to_thread(store_markdown, ocr_result, article_id)
+        if not stored:
+            raise Exception("Storing markdown failed.")
+    except Exception as e:
+        raise Exception("Error storing markdown: " + str(e))
+    return {"article_id": article_id}
 
 @app.get("/files/{file_id}")
 async def get_file(file_id: str):
@@ -74,10 +79,28 @@ async def get_file(file_id: str):
     except Exception as e:
         print(f"Error retrieving file: {str(e)}")  # Log the actual error
         raise HTTPException(status_code=404, detail=f"File not found: {str(e)}")
+    
+@app.get("/articles/{article_id}")
+async def get_article(article_id: str):
+    """
+    Endpoint to retrieve an article by its ID.
+    
+    Args:
+        article_id: The unique identifier for the article.
+        
+    Returns:
+        The article content if found, or a 404 error if not found.
+    """
+    try:
+        article_content = get_markdown(article_id)
+        if article_content:
+            return article_content
+        else:
+            raise HTTPException(status_code=404, detail="Article not found")
+    except Exception as e:
+        print(f"Error retrieving article: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve article: {str(e)}")
 
 if __name__ == "__main__":
-    # import uvicorn
-    # uvicorn.run("server:app", host="0.0.0.0", port=8000, reload=True)
-    import asyncio
-    
-    asyncio.run(upload_document("11111"))
+    import uvicorn
+    uvicorn.run("server:app", host="0.0.0.0", port=8000, reload=True)

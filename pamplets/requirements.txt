@@ -4,6 +4,7 @@ fastapi == 0.115.12
 uvicorn == 0.34.0
 python-multipart==0.0.20
 pymongo == 4.11.3
+psycopg2 == 2.9.10
 
 
 
