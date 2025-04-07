@@ -24,6 +24,7 @@ app.add_middleware(
     allow_headers=["*"],  # Allow all headers
     expose_headers=["*"],  # Expose all headers in response
 )
+
 mongo_url = os.environ.get("MONGO_URL")
 
 mongo_client = MongoClient(mongo_url)
@@ -66,6 +67,16 @@ async def upload_document(file: UploadFile = File(...)):
             raise Exception("Storing markdown failed.")
     except Exception as e:
         raise Exception("Error storing markdown: " + str(e))
+    
+    # After successfully storing the markdown, delete the original file from GridFS
+    try:
+        from bson.objectid import ObjectId
+        obj_id = ObjectId(file_id)
+        fs.delete(obj_id)
+        print(f"Successfully deleted file {file_id} from MongoDB GridFS")
+    except Exception as e:
+        print(f"Warning: Could not delete file from GridFS: {str(e)}")
+        # Continue execution even if deletion fails
     return {"article_id": article_id}
 
 @app.get("/files/{file_id}")

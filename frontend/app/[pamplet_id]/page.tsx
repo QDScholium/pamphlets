@@ -10,6 +10,10 @@ import { CharisSIL_400Regular_Italic } from '@expo-google-fonts/charis-sil/400Re
 import { CharisSIL_700Bold } from '@expo-google-fonts/charis-sil/700Bold';
 import { CharisSIL_700Bold_Italic } from '@expo-google-fonts/charis-sil/700Bold_Italic';
 
+// @ts-ignore
+import Latex from 'react-latex';
+
+
 export default function PampletPage() {
   const params = useParams();
   const pampletId = params.pamplet_id;
@@ -69,7 +73,11 @@ export default function PampletPage() {
                         code: ({ children }: React.PropsWithChildren) => <code className="bg-gray-100 px-1 py-0.5 rounded font-mono text-base">{children}</code>
                     }}
                 >
-                    {page.markdown}
+                    {page.markdown.replace(/\$\$(.*?)\$\$/g, (match: string, formula: string) => (
+                      `<span class="math-display">${formula}</span>`
+                    )).replace(/\$(.*?)\$/g, (match: string, formula: string) => (
+                      `<span class="math-inline">${formula}</span>`
+                    ))}
                 </ReactMarkdown>
                 {/* <hr className="my-6 border-t border-black" /> */}
                 <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
