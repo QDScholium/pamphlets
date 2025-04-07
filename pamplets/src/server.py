@@ -3,6 +3,8 @@ import io
 from fastapi import FastAPI, HTTPException, UploadFile, File, Response, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from dotenv import load_dotenv
 from psycopg2.extras import Json
@@ -58,15 +60,16 @@ async def upload_document(file: UploadFile = File(...)):
             raise Exception("OCR processing returned empty result")
     except Exception as e:
         print(f"OCR processing error: {str(e)}")
-        return JSONResponse(status_code=500, content={"message": f"OCR processing failed: {str(e)}"})
+        return RequestValidationError(data={"detail": str(e)})
 
     article_id = str(file_id)
     try:
         stored = await asyncio.to_thread(store_markdown, ocr_result, article_id)
         if not stored:
-            raise Exception("Storing markdown failed.")
+            return JSONResponse(status_code=500, content={"message": "Failed to store document content"})
     except Exception as e:
-        raise Exception("Error storing markdown: " + str(e))
+        print(f"Error storing markdown: {str(e)}")
+        return JSONResponse(status_code=500, content={"message": f"Error processing document: {str(e)}"})
     
     # After successfully storing the markdown, delete the original file from GridFS
     try:
@@ -76,7 +79,7 @@ async def upload_document(file: UploadFile = File(...)):
         print(f"Successfully deleted file {file_id} from MongoDB GridFS")
     except Exception as e:
         print(f"Warning: Could not delete file from GridFS: {str(e)}")
-        # Continue execution even if deletion fails
+        
     return {"article_id": article_id}
 
 @app.get("/files/{file_id}")

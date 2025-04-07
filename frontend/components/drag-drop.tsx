@@ -5,11 +5,16 @@ import type { UploadProps } from 'antd';
 import { message, Upload } from 'antd';
 import '@ant-design/v5-patch-for-react-19';
 
+
+const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+
+console.log('Backend URL:', backendUrl);
+
 const { Dragger } = Upload;
 const props: UploadProps = {
   name: 'file',
   multiple: false,
-  action: 'http://localhost:8000/upload',
+  action: `${backendUrl}/upload`,
   headers: {
     'Accept': 'application/json',
   },
