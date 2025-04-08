@@ -12,6 +12,7 @@ import { CharisSIL_700Bold_Italic } from '@expo-google-fonts/charis-sil/700Bold_
 
 // @ts-ignore
 import Latex from 'react-latex';
+const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
 
 
 export default function PampletPage() {
@@ -24,7 +25,7 @@ export default function PampletPage() {
   useEffect(() => {
     async function fetchPampletContent() {
       try {
-        const response = await fetch(`http://localhost:8000/articles/${pampletId}`);
+        const response = await fetch(`${backendUrl}/articles/${pampletId}`);
         if (!response.ok) {
           throw new Error(`Failed to fetch pamplet: ${response.statusText}`);
         }
