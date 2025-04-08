@@ -49,27 +49,25 @@ async def root():
 async def upload_document(file: UploadFile = File(...)):
     if not file:
         return JSONResponse(status_code=400, content={"message": "No file uploaded"})
-
     file_bytes = await file.read()
     file_id = fs.put(file_bytes, filename=file.filename, content_type="application/pdf")
-    file_url = f"{backend_url}/files/{file_id}"
-    print(f"Generated file URL: {file_url}")
+    file_url = f"{backend_url}files/{file_id}"
+    
     try: 
         ocr_result = await asyncio.to_thread(process_document_ocr, file_url)
         if not ocr_result:
             raise Exception("OCR processing returned empty result")
     except Exception as e:
-        print(f"OCR processing error: {str(e)}")
-        return RequestValidationError(data={"detail": str(e)})
+        raise e
 
     article_id = str(file_id)
+
     try:
         stored = await asyncio.to_thread(store_markdown, ocr_result, article_id)
         if not stored:
             return JSONResponse(status_code=500, content={"message": "Failed to store document content"})
     except Exception as e:
-        print(f"Error storing markdown: {str(e)}")
-        return JSONResponse(status_code=500, content={"message": f"Error processing document: {str(e)}"})
+        raise e
     
     # After successfully storing the markdown, delete the original file from GridFS
     try:
