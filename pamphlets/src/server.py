@@ -17,14 +17,12 @@ import gridfs
 load_dotenv()
 
 app = FastAPI(title="Pamplets OCR API", description="API for OCR processing using Mistral")
-# Add CORS middleware with more permissive settings
+# I hate CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins instead of just localhost:3000
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["*"],  # Allow all headers
-    expose_headers=["*"],  # Expose all headers in response
+    allow_origins=["https://pamphlets.scholium.ai/"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 mongo_url = os.environ.get("MONGO_URL")
