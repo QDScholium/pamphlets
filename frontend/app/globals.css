@@ -25,3 +25,12 @@ body {
   color: var(--foreground);
   font-family: "Helvetica", sans-serif;
 }
+
+.katex {
+  font-size: 1.4rem;
+  color: #2a2a2a;
+  font-family: 'Times New Roman', serif;
+}
+.katex-display {
+  text-align: center;
+}

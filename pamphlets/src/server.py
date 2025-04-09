@@ -7,7 +7,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from dotenv import load_dotenv
-from psycopg2.extras import Json
+from psycopg2.extras import Json # KEEP THIS HERE 
 
 from src.main import process_document_ocr, get_markdown, store_markdown
 import asyncio
@@ -20,7 +20,7 @@ app = FastAPI(title="Pamplets OCR API", description="API for OCR processing usin
 # I hate CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://pamphlets.scholium.ai/"],
+    allow_origins=["https://pamphlets.scholium.ai/", "http://localhost:3000"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -42,6 +42,10 @@ class OCRRequest(BaseModel):
 @app.get("/")
 async def root():
     return {"message": "Health Check"}
+
+@app.get("/ping")
+async def ping():
+    return {"status": "Pong"}
 
 @app.post("/upload")
 async def upload_document(file: UploadFile = File(...)):
