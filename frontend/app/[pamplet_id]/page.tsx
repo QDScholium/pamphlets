@@ -10,6 +10,20 @@ import 'katex/dist/katex.min.css';
 
 const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
 
+interface OCRImageObject {
+  id: string;
+  top_left_x: number;
+  top_left_y: number;
+  bottom_right_x: number;
+  bottom_right_y: number;
+  image_base64: string;
+}
+
+interface PageData {
+  markdown: string;
+  images: OCRImageObject[];
+}
+
 
 function escapeCustomTags(md: string): string {
   return md.replace(/<(\/?\w+?)>/g, (_, tag) => `\`<${tag}>\``);
@@ -98,7 +112,22 @@ export default function PampletPage() {
                     ),
                     code: ({ children }: React.PropsWithChildren) => (
                       <code className="bg-gray-100 px-1 py-0.5 rounded font-mono text-base">{children}</code>
-                    )
+                    ),
+                    img: ({ src, alt }: { src?: string; alt?: string }) => {
+                      const image = page.images.find((img: OCRImageObject) => img.id === src);
+                      const base64Src = image?.image_base64;
+                      if (!base64Src) {
+                        // If no matching image is found, return null (renders nothing)
+                        return null;
+                      }
+                      return (
+                        <img
+                          alt={alt}
+                          src={base64Src}
+                          className="w-full max-w-2xl rounded shadow-md"
+                        />
+                      );
+                    },
                   }}
                 >
                   {escapeCustomTags(page.markdown).replace(/\[\^0\]/g, '')}

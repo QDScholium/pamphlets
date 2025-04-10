@@ -74,7 +74,8 @@ def process_img_ocr(base64_image:str) -> str:
             document={
                 "type": "image_url",
                 "image_url": f"data:image/jpeg;base64,{base64_image}" 
-            }
+            }, 
+            include_image_base64=True
         )
         return ocr_response.model_dump()
     except Exception as e:

@@ -1,5 +1,9 @@
 import os
 import io
+import asyncio
+import gridfs
+from pymongo import MongoClient
+
 from fastapi import FastAPI, HTTPException, UploadFile, File, Response, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -8,10 +12,7 @@ from pydantic import BaseModel
 from dotenv import load_dotenv
 from psycopg2.extras import Json # KEEP THIS HERE 
 
-from src.main import process_document_ocr, get_markdown, store_markdown
-import asyncio
-from pymongo import MongoClient
-import gridfs
+from src.main import get_markdown, store_markdown
 from src.document_processing import read_document
 from src.image_processing import read_image
 
@@ -50,9 +51,11 @@ async def ping():
 
 @app.post("/upload")
 async def upload_document(file: UploadFile = File(...)):
+    is_document = file.content_type == "application/pdf"
     try:
         if file.content_type == "application/pdf":
             article_id, ocr_result = await read_document(file)
+
         elif file.content_type in ["image/jpeg", "image/png"]:
             article_id, ocr_result = await read_image(file)
         else:
@@ -82,14 +85,15 @@ async def upload_document(file: UploadFile = File(...)):
         raise e
     
     # After successfully storing the markdown, delete the original file from GridFS
-    try:
-        from bson.objectid import ObjectId
-        obj_id = ObjectId(article_id)
-        fs.delete(obj_id)
-        print(f"Successfully deleted file {article_id} from MongoDB GridFS")
-    except Exception as e:
-        print(f"Warning: Could not delete file from GridFS: {str(e)}")
-        
+    if is_document:
+        try:
+            from bson.objectid import ObjectId
+            obj_id = ObjectId(article_id)
+            fs.delete(obj_id)
+            print(f"Successfully deleted file {article_id} from MongoDB GridFS")
+        except Exception as e:
+            print(f"Warning: Could not delete file from GridFS: {str(e)}")
+            
     return {"article_id": article_id}
 
 @app.get("/files/{file_id}")
