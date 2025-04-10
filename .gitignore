@@ -3,3 +3,4 @@
 **/__pycache__/
 *.py[cod]
 *$py.class
+/pamphlets/src/sample_imgs

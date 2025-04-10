@@ -4,7 +4,6 @@ from fastapi import FastAPI, HTTPException, UploadFile, File, Response, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from dotenv import load_dotenv
 from psycopg2.extras import Json # KEEP THIS HERE 
@@ -13,6 +12,8 @@ from src.main import process_document_ocr, get_markdown, store_markdown
 import asyncio
 from pymongo import MongoClient
 import gridfs
+from src.document_processing import read_document
+from src.image_processing import read_image
 
 load_dotenv()
 
@@ -49,23 +50,32 @@ async def ping():
 
 @app.post("/upload")
 async def upload_document(file: UploadFile = File(...)):
-    if not file:
-        return JSONResponse(status_code=400, content={"message": "No file uploaded"})
-    file_bytes = await file.read()
-    file_id = fs.put(file_bytes, filename=file.filename, content_type="application/pdf")
-    file_url = f"{backend_url}files/{file_id}"
-    
-    try: 
-        ocr_result = await asyncio.to_thread(process_document_ocr, file_url)
-        if not ocr_result:
-            raise Exception("OCR processing returned empty result")
+    try:
+        if file.content_type == "application/pdf":
+            article_id, ocr_result = await read_document(file)
+        elif file.content_type in ["image/jpeg", "image/png"]:
+            article_id, ocr_result = await read_image(file)
+        else:
+            return JSONResponse(
+                status_code=400, 
+                content={"message": "Only PDF, JPEG, and PNG files are supported"}
+            )
     except Exception as e:
-        raise e
-
-    article_id = str(file_id)
+        raise HTTPException(status_code=500, detail=f"Error processing document: {str(e)}")
 
     try:
-        stored = await asyncio.to_thread(store_markdown, ocr_result, article_id)
+
+        retry_count = 3
+        stored = False
+        for attempt in range(retry_count):
+            try:
+                stored = await asyncio.to_thread(store_markdown, ocr_result, article_id)
+                if stored:
+                    break
+            except Exception as e:
+                print(f"Attempt {attempt+1}/{retry_count} failed: {str(e)}")
+                if attempt < retry_count - 1:
+                    await asyncio.sleep(1)  # Wait before retrying
         if not stored:
             return JSONResponse(status_code=500, content={"message": "Failed to store document content"})
     except Exception as e:
@@ -74,9 +84,9 @@ async def upload_document(file: UploadFile = File(...)):
     # After successfully storing the markdown, delete the original file from GridFS
     try:
         from bson.objectid import ObjectId
-        obj_id = ObjectId(file_id)
+        obj_id = ObjectId(article_id)
         fs.delete(obj_id)
-        print(f"Successfully deleted file {file_id} from MongoDB GridFS")
+        print(f"Successfully deleted file {article_id} from MongoDB GridFS")
     except Exception as e:
         print(f"Warning: Could not delete file from GridFS: {str(e)}")
         

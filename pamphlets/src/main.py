@@ -4,6 +4,8 @@ from dotenv import load_dotenv
 from psycopg2 import pool
 from psycopg2.extras import Json
 
+from src.image_processing import *
+from src.client import client
 
 load_dotenv()
 connection_string = os.getenv('DATABASE_URL')
@@ -34,7 +36,7 @@ def process_document_ocr(file_url):
     # Ensure the URL is properly formatted
     if not file_url.startswith(("http://", "https://")):
         raise ValueError(f"URL must start with http:// or https://: {file_url}")
-    
+
     try:
         # Use the existing client but with explicit parameters
         ocr_response = client.ocr.process(
@@ -49,7 +51,7 @@ def process_document_ocr(file_url):
     except Exception as e:
         error_msg = f"OCR processing failed: {str(e)}"
         raise type(e)(error_msg) from e
-    
+
 
 def store_markdown(markdown:dict, id: str):
     """
@@ -111,10 +113,26 @@ def get_markdown(id: str):
     finally:
         if conn:
             connection_pool.putconn(conn)
-    
+
+
+
 if __name__ == "__main__":
     # file_url = "https://13a5-138-51-71-14.ngrok-free.app/files/67f309db84159383bd889930"
     # file_md = process_document_ocr(file_url)
     # print(type(file_md))
     # store_markdown(file_md,"67f309db84159383bd889930")
-    print(get_markdown("67f309db84159383bd889930"))
+    # print(get_markdown("67f309db84159383bd889930"))
+
+    # encoded_img = encode_image("sample_img.jpeg")
+    # jpeg_img = convert_png_to_jpeg_base64("sample_img.jpeg")
+    # print(f"Encoded image size: {len(encoded_img)} bytes")
+    # print(f"JPEG image size: {len(jpeg_img)} bytes")
+    # print(process_img_ocr(jpeg_img))
+    
+    images = ["./sample_imgs/sample_img.png", "./sample_imgs/sample_img2.png", 
+              "./sample_imgs/sample_img3.png", "./sample_imgs/sample_img4.png", 
+              "./sample_imgs/sample_img5.png"]
+    # print(encode_and_process_image(images[0]))
+    print(len(process_img_batch(images)))
+
+
